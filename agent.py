@@ -10,9 +10,8 @@ import os
 load_dotenv()
 
 llm = HuggingFaceEndpoint(
-    repo_id="Qwen/Qwen2.5-1.5B-Instruct",
+    repo_id="Qwen/Qwen2.5-7B-Instruct" ,
     task="conversational",
-    provider="featherless-ai",
     huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
     temperature=0.4,
 )
@@ -27,18 +26,18 @@ tools = {
 def search_agent () :
     return create_agent(
         model = model ,
-        tools = web_search
+        tools = [web_search]
     )
 
 def reader_agent () :
     return create_agent(
         model = model ,
-        tools = scrape_url
+        tools = [scrape_url]
     )
 
 writer_prompt = ChatPromptTemplate.from_messages([
-    {"system" , "You are an expert research writer . Write clear , structured and insightful report"} ,
-    {"human" , '''Write a detailed search report on the topic below
+    ("system" , "You are an expert research writer . Write clear , structured and insightful report") ,
+    ("human" , '''Write a detailed search report on the topic below
 Topic : {topic}
 Research Gathered:
 {research}
@@ -48,14 +47,14 @@ Structure the report as :
 - Key finding (minimum well explained 3 points)
 - Conslusion
 - Sources (List all URLs found in the research)
-Be detailed , factual and professional'''}
+Be detailed , factual and professional''')
 ])
 
 writer_chain = writer_prompt | model | StrOutputParser()
 
 critic_prompt = ChatPromptTemplate.from_messages([
-    {"system" , "You are a sharp anf constructive research critic . Be honest and sepcific"} ,
-    {"human" , '''Review the research report below and evaluate it strictly
+    ("system" , "You are a sharp anf constructive research critic . Be honest and sepcific") ,
+    ("human" , '''Review the research report below and evaluate it strictly
 Report : 
 {report}
 
@@ -72,7 +71,7 @@ Areas to improve :
 - ...
 
 One line verdict :
-...'''} 
+...''')
 ])
 
 critic_chain = critic_prompt | model | StrOutputParser()

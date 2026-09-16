@@ -1,5 +1,6 @@
 from agent import search_agent , reader_agent , writer_chain , critic_chain
-
+from rich import print
+from retry import invoke_with_retry
 def run_research_pipeline (topic : str) -> dict :
     state= {}
 
@@ -9,8 +10,8 @@ def run_research_pipeline (topic : str) -> dict :
 
     searchagent = search_agent()
 
-    search_result = searchagent.invoke({
-        "messages" : [{"user" , f"Find recent , reliable and detailed information about : {topic}"}]
+    search_result = invoke_with_retry(searchagent, {
+        "messages": [("user", f"Find recent, reliable and detailed information about : {topic}")]
     })
 
     state['search_results'] = search_result['messages'][-1].content
@@ -22,12 +23,12 @@ def run_research_pipeline (topic : str) -> dict :
     print("="*50)
 
     readeragent = reader_agent()
-    reader_result = readeragent.invoke({
-        "messages" : [("user" , 
-            f"Based on the following search results about {topic}" 
-            f"Pick the most relevant URLs and scrape it for deeper content . \n\n"
-            f"Search results : \n{state['search_results'][:800]}"
-        )]
+    reader_result = invoke_with_retry(readeragent, {
+    "messages": [("user", 
+        f"Based on the following search results about {topic}"
+        f"Pick the most relevant URLs and scrape it for deeper content.\n\n"
+        f"Search results : \n{state['search_results'][:800]}"
+    )]
     })
     state['scraped_results'] = reader_result['messages'][-1].content
 
@@ -42,9 +43,9 @@ def run_research_pipeline (topic : str) -> dict :
         f'DETAILED SCRAPED CONTENT : {state['scraped_results']} \n\n'
     )
 
-    state['report'] = writer_chain.invoke({
-        "topic" : topic ,
-        "research" : research_combined
+    state['report'] = invoke_with_retry(writer_chain, {
+        "topic": topic,
+        "research": research_combined
     })
 
     print(f"\n\n FINAL REPORT : {state['report']}")
@@ -61,3 +62,6 @@ def run_research_pipeline (topic : str) -> dict :
     return state
 
 
+if __name__ == "__main__" :
+    topic = input("\n Enter the research topic : ")
+    run_research_pipeline(topic=topic)
